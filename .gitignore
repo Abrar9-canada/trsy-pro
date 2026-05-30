@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# تجاهل مفاتيح الاتصال الخاصة
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# تجاهل ملفات النظام والمكتبات الثقيلة
+node_modules
+.next
+dist
+build
+.DS_Store
+*.log
