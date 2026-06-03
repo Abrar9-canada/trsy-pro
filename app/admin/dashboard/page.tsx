@@ -3,81 +3,88 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast, Toaster } from 'react-hot-toast';
+import { LayoutDashboard, Users, TrendingUp, Wallet, Bell, Award, Loader2 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. جلب البيانات والإحصائيات
     async function fetchData() {
-      const { data: clients } = await supabase.from('clients').select('*');
-      const { data: reps } = await supabase.from('profiles').select('*').eq('role', 'representative');
-      
-      setStats({
-        totalClients: clients?.length || 0,
-        totalReps: reps?.length || 0,
-        totalEarnings: clients?.reduce((sum, c) => sum + (Number(c.total_budget) || 0), 0) || 0,
-        leaderboard: reps?.map(r => ({
-          name: r.full_name,
-          performance: Math.floor(Math.random() * 100) 
-        })).sort((a, b) => b.performance - a.performance)
-      });
+      setLoading(true);
+      try {
+        const { data: clients } = await supabase.from('clients').select('*');
+        const { data: reps } = await supabase.from('profiles').select('*').eq('role', 'representative');
+        
+        setStats({
+          totalClients: clients?.length || 0,
+          totalReps: reps?.length || 0,
+          totalEarnings: clients?.reduce((sum, c) => sum + (Number(c.total_budget) || 0), 0) || 0,
+          leaderboard: reps?.map(r => ({
+            name: r.full_name || 'مندوب غير مسمى',
+            performance: Math.floor(Math.random() * 100) 
+          })).sort((a, b) => b.performance - a.performance)
+        });
+      } finally {
+        setLoading(false);
+      }
     }
     fetchData();
 
-    // 2. الاستماع للإشعارات الجديدة (طلبات السحب)
-    const channel = supabase.channel('new-withdrawals')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'notifications' 
-      }, (payload) => {
-        toast.custom(() => (
-          <div className="bg-yellow-500 p-4 rounded-lg shadow-2xl text-black font-bold border border-black animate-bounce">
-            🚨 طلب سحب أرباح جديد!
-            <p className="text-sm font-normal">{payload.new.message}</p>
+    const channel = supabase.channel('admin-notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+        toast.custom((t) => (
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-[#1a1a1a] border border-yellow-500/50 shadow-2xl rounded-2xl p-4 flex items-center gap-4`}>
+            <Bell className="text-yellow-500 animate-bounce" />
+            <div>
+              <p className="text-sm font-bold text-white">إشعار جديد</p>
+              <p className="text-xs text-gray-400">{payload.new.message}</p>
+            </div>
           </div>
-        ), { duration: 6000 });
+        ), { duration: 8000 });
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  if (!stats) return <div className="flex justify-center items-center h-screen text-yellow-500">جاري تحميل لوحة التحكم الفخمة...</div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-yellow-500"><Loader2 className="animate-spin" size={48} /></div>;
 
   return (
-    <div className="p-8 bg-[#030712] min-h-screen text-white font-sans">
-      <Toaster position="top-left" />
+    <div className="p-4 md:p-8 bg-[#0a0a0a] min-h-screen text-white">
+      <Toaster position="top-right" />
       
-      <h1 className="text-4xl font-extrabold mb-10 bg-clip-text text-transparent bg-linear-to-r from-yellow-500 to-yellow-200">
-        لوحة تحكم الإدارة
-      </h1>
+      <header className="mb-10">
+        <h1 className="text-3xl md:text-4xl font-bold text-white">لوحة الإدارة</h1>
+        <p className="text-gray-500 mt-2">مرحباً بك في لوحة التحكم المركزية</p>
+      </header>
 
-      {/* بطاقات الإحصائيات الفخمة */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-        <StatCard title="إجمالي الطلبات" value={stats.totalClients} />
-        <StatCard title="المناديب النشطين" value={stats.totalReps} />
-        <StatCard title="الأرباح الكلية" value={`${stats.totalEarnings} ر.س`} />
-        <StatCard title="العمولات المستحقة" value="12,500 ر.س" />
+      {/* بطاقات الإحصائيات */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <StatCard title="إجمالي الطلبات" value={stats.totalClients} icon={<LayoutDashboard className="text-yellow-500" />} />
+        <StatCard title="المناديب النشطين" value={stats.totalReps} icon={<Users className="text-violet-500" />} />
+        <StatCard title="الأرباح الكلية" value={`${stats.totalEarnings.toLocaleString()} ر.س`} icon={<TrendingUp className="text-green-500" />} />
+        <StatCard title="طلبات سحب معلقة" value="5" icon={<Wallet className="text-red-500" />} />
       </div>
 
       {/* لوحة ترتيب المناديب */}
-      <div className="bg-gray-900/50 p-8 rounded-3xl border border-gray-800 backdrop-blur-lg">
-        <h2 className="text-2xl font-bold mb-6 text-yellow-500">🏆 لوحة ترتيب المناديب (Leaderboard)</h2>
+      <div className="bg-[#121212] p-8 rounded-3xl border border-white/5 shadow-xl">
+        <h2 className="text-xl font-bold mb-8 flex items-center gap-3">
+          <Award className="text-yellow-500" /> قائمة المتصدرين (الأداء)
+        </h2>
         <div className="space-y-4">
           {stats.leaderboard.map((rep: any, i: number) => (
-            <div key={i} className="flex items-center justify-between p-4 bg-gray-800/40 rounded-2xl hover:bg-gray-800 transition border border-gray-700/50">
-              <div className="flex items-center gap-4">
-                <span className={`w-8 h-8 flex items-center justify-center rounded-full font-bold ${i === 0 ? 'bg-yellow-500 text-black' : 'bg-gray-700'}`}>
-                  {i + 1}
-                </span>
-                <span className="font-bold">{rep.name}</span>
+            <div key={i} className="flex items-center gap-6 p-4 bg-[#0a0a0a] rounded-2xl border border-white/5 hover:border-yellow-500/30 transition">
+              <span className={`w-10 h-10 flex items-center justify-center rounded-2xl font-bold ${i === 0 ? 'bg-yellow-500 text-black' : 'bg-[#1a1a1a]'}`}>
+                {i + 1}
+              </span>
+              <div className="flex-1">
+                <p className="font-bold">{rep.name}</p>
+                <div className="w-full bg-white/5 h-1.5 rounded-full mt-2">
+                  <div className="bg-gradient-to-r from-yellow-500 to-yellow-300 h-full rounded-full transition-all duration-1000" style={{ width: `${rep.performance}%` }}></div>
+                </div>
               </div>
-              <div className="w-1/3 bg-gray-700 h-2 rounded-full overflow-hidden">
-                <div className="bg-yellow-500 h-full" style={{ width: `${rep.performance}%` }}></div>
-              </div>
-              <span className="text-sm font-mono">{rep.performance} نقطة</span>
+              <span className="font-mono font-bold text-yellow-500">{rep.performance} نقطة</span>
             </div>
           ))}
         </div>
@@ -86,12 +93,14 @@ export default function AdminDashboard() {
   );
 }
 
-// مكون البطاقة الفخمة
-function StatCard({ title, value }: { title: string, value: string | number }) {
+function StatCard({ title, value, icon }: { title: string, value: string | number, icon: any }) {
   return (
-    <div className="p-8 bg-linear-to-br from-gray-900 to-gray-800 rounded-3xl border border-gray-700 shadow-[0_8px_30px_rgb(0,0,0,0.5)] hover:border-yellow-600 transition-all duration-300 transform hover:scale-[1.02]">
-      <h4 className="text-gray-400 text-xs uppercase tracking-widest mb-2">{title}</h4>
-      <p className="text-4xl font-black text-white">{value}</p>
+    <div className="p-6 bg-[#121212] rounded-3xl border border-white/5 flex flex-col gap-3 hover:border-white/10 transition shadow-lg">
+      <div className="flex justify-between items-center">
+        <span className="text-gray-400 text-sm">{title}</span>
+        {icon}
+      </div>
+      <p className="text-2xl font-bold">{value}</p>
     </div>
   );
 }

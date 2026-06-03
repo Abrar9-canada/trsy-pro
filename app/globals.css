@@ -1,16 +1,31 @@
 @import "tailwindcss";
 
 @theme {
+  /* تعاريف الألوان */
   --color-dark: #0a0a0a;
   --color-dark-light: #171717;
   --color-gold: #D4AF37;
   --color-gold-light: #F8E08E;
   --color-violet: #6D28D9;
   --color-violet-light: #8B5CF6;
+  
+  /* إضافة الـ Animations */
+  --animate-gradient-x: gradient-x 15s ease infinite;
+
+  @keyframes gradient-x {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
 }
 
 @layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
   body {
-    background-color: var(--color-dark);
+    @apply bg-dark text-white antialiased overflow-x-hidden selection:bg-gold/30;
   }
 }
+
+/* لا داعي لإضافة @tailwind لأن الاستيراد في السطر الأول يقوم بالعمل */

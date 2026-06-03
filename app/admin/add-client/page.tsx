@@ -1,80 +1,111 @@
 "use client";
-import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Toaster, toast } from 'react-hot-toast';
+import { supabase } from '@/lib/supabase';
+import { toast, Toaster } from 'react-hot-toast';
+import { UserPlus, Loader2, DollarSign, Briefcase } from 'lucide-react';
 
 export default function AddClientPage() {
   const router = useRouter();
+  const [reps, setReps] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // بيانات العميل المحدثة
+  const [formData, setFormData] = useState({
+    owner_name: '',
+    phone: '',
+    address: '',
+    service_type: '', // نوع الخدمة
+    amount: '',       // المبلغ المالي
+    user_id: ''       // مندوب الطلب
+  });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    async function fetchReps() {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'representative');
+      
+      if (data) setReps(data);
+    }
+    fetchReps();
+  }, []);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
 
-    const { error } = await supabase.from('clients').insert([{
-      ...data,
-      status: 'تحت المراجعة' // الحالة الأولية التلقائية
-    }]);
+    // ملاحظة: تأكدي أن هذه الأعمدة موجودة في جدول clients
+    const { error } = await supabase.from('clients').insert([formData]);
 
     if (error) {
       toast.error("خطأ: " + error.message);
     } else {
-      toast.success("تم تسجيل العميل والطلب بنجاح!");
-      setTimeout(() => router.push('/admin/dashboard'), 1500);
+      toast.success("تم إضافة العميل والطلب بنجاح!");
+      router.push('/admin/orders');
     }
     setLoading(false);
-  };
+  }
 
   return (
-    <div className="p-8 max-w-3xl mx-auto text-white bg-gray-950 min-h-screen">
-      <Toaster />
-      <button onClick={() => router.back()} className="mb-6 text-yellow-500">← عودة</button>
-      
-      <h1 className="text-3xl font-bold mb-8 text-center text-yellow-500">إضافة عميل وطلب جديد</h1>
+    <div className="p-8 max-w-2xl mx-auto">
+      <Toaster position="top-right" />
+      <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
+        <UserPlus className="text-yellow-500" /> إضافة عميل وطلب جديد
+      </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-10">
+      <form onSubmit={handleSubmit} className="bg-[#121212] p-8 rounded-3xl border border-white/5 space-y-6">
         
-        {/* قسم 1: معلومات العميل */}
-        <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-          <h2 className="text-xl font-bold mb-4 text-yellow-500">معلومات العميل</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input name="owner_name" placeholder="اسم صاحب المشروع" className="w-full p-3 bg-gray-800 rounded" required />
-            <input name="phone" placeholder="رقم الهاتف" className="w-full p-3 bg-gray-800 rounded" required />
-            <input name="whatsapp" placeholder="رابط الواتساب" className="w-full p-3 bg-gray-800 rounded" />
-            <input name="business_name" placeholder="اسم المشروع / المحل" className="w-full p-3 bg-gray-800 rounded" required />
-            <input name="activity_type" placeholder="نوع النشاط" className="w-full p-3 bg-gray-800 rounded" />
-            <input name="location" placeholder="المدينة والمنطقة" className="w-full p-3 bg-gray-800 rounded" />
-            <input name="maps_url" placeholder="رابط Google Maps" className="w-full p-3 bg-gray-800 rounded" />
-            <input name="instagram" placeholder="حساب إنستغرام (اختياري)" className="w-full p-3 bg-gray-800 rounded" />
+        {/* بيانات العميل الشخصية */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block mb-2 text-sm text-gray-400">اسم العميل</label>
+            <input type="text" required className="w-full p-4 bg-[#0a0a0a] border border-white/10 rounded-xl text-white outline-none focus:border-yellow-500"
+              onChange={(e) => setFormData({...formData, owner_name: e.target.value})} />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm text-gray-400">رقم الهاتف</label>
+            <input type="tel" required className="w-full p-4 bg-[#0a0a0a] border border-white/10 rounded-xl text-white outline-none focus:border-yellow-500"
+              onChange={(e) => setFormData({...formData, phone: e.target.value})} />
           </div>
         </div>
 
-        {/* قسم 2: تفاصيل الطلب */}
-        <div className="bg-gray-900 p-6 rounded-2xl border border-gray-800">
-          <h2 className="text-xl font-bold mb-4 text-yellow-500">تفاصيل الطلب</h2>
-          <div className="space-y-4">
-            <select name="site_type" className="w-full p-3 bg-gray-800 rounded">
-              <option value="صفحة تعريفية">صفحة تعريفية</option>
-              <option value="موقع مطعم">موقع مطعم</option>
-              <option value="متجر إلكتروني">متجر إلكتروني</option>
-              <option value="موقع حجوزات">موقع حجوزات</option>
-              <option value="تصميم مخصص">تصميم مخصص</option>
-            </select>
-            <textarea name="description" placeholder="وصف الطلب" className="w-full p-3 bg-gray-800 rounded h-24" />
-            <textarea name="features" placeholder="المميزات المطلوبة" className="w-full p-3 bg-gray-800 rounded h-20" />
-            <div className="grid grid-cols-2 gap-4">
-              <input name="budget" placeholder="الميزانية المتوقعة" className="w-full p-3 bg-gray-800 rounded" />
-              <input name="deadline" type="date" className="w-full p-3 bg-gray-800 rounded" />
-            </div>
-            <input type="file" className="w-full p-3 bg-gray-800 rounded" />
+        <div>
+          <label className="block mb-2 text-sm text-gray-400">العنوان</label>
+          <input type="text" required className="w-full p-4 bg-[#0a0a0a] border border-white/10 rounded-xl text-white outline-none focus:border-yellow-500"
+            onChange={(e) => setFormData({...formData, address: e.target.value})} />
+        </div>
+
+        {/* تفاصيل الطلب المالية والخدمية */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block mb-2 text-sm text-gray-400 flex items-center gap-2"><Briefcase size={16}/> نوع الخدمة</label>
+            <input type="text" required className="w-full p-4 bg-[#0a0a0a] border border-white/10 rounded-xl text-white outline-none focus:border-yellow-500"
+              onChange={(e) => setFormData({...formData, service_type: e.target.value})} />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm text-gray-400 flex items-center gap-2"><DollarSign size={16}/> المبلغ المالي</label>
+            <input type="number" required className="w-full p-4 bg-[#0a0a0a] border border-white/10 rounded-xl text-white outline-none focus:border-yellow-500"
+              onChange={(e) => setFormData({...formData, amount: e.target.value})} />
           </div>
         </div>
 
-        <button disabled={loading} className="w-full py-4 bg-yellow-600 rounded-xl font-bold hover:bg-yellow-500">
-          {loading ? "جاري الإنشاء..." : "حفظ العميل والطلب"}
+        {/* اختيار المندوب */}
+        <div>
+          <label className="block mb-2 text-sm text-gray-400">تعيين المندوب المسؤول</label>
+          <select required className="w-full p-4 bg-[#0a0a0a] border border-white/10 rounded-xl text-white outline-none focus:border-yellow-500"
+            onChange={(e) => setFormData({...formData, user_id: e.target.value})}>
+            <option value="">-- اختر مندوباً --</option>
+            {reps.map((rep) => (
+              <option key={rep.id} value={rep.id}>{rep.full_name}</option>
+            ))}
+          </select>
+        </div>
+
+        <button type="submit" disabled={loading}
+          className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl transition flex items-center justify-center gap-2">
+          {loading ? <Loader2 className="animate-spin" /> : "إضافة الطلب للنظام"}
         </button>
       </form>
     </div>
