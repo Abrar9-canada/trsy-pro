@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Toaster } from 'react-hot-toast';
-import { LayoutDashboard, TrendingUp, Wallet, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, Wallet, CheckCircle, Clock, XCircle, Award } from 'lucide-react';
 
 export default function RepDashboard() {
   const [stats, setStats] = useState<any>(null);
@@ -13,10 +14,11 @@ export default function RepDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // استخدام الاستعلام الموحد لضمان جلب كافة طلبات المندوب
     const { data: clients } = await supabase
       .from('clients')
       .select('*')
-      .eq('representative_id', user.id);
+      .or(`representative_id.eq.${user.id},user_id.eq.${user.id}`);
 
     if (clients) {
       const total = clients.length;
@@ -32,8 +34,8 @@ export default function RepDashboard() {
         totalEarnings, paidEarnings,
         chartData: [
           { name: 'مراجعة', count: pending, color: '#D4AF37' },
-          { name: 'مكتمل', count: completed, color: '#6D28D9' },
-          { name: 'ملغي', count: cancelled, color: '#ef4444' }
+          { name: 'مكتمل', count: completed, color: '#8B5CF6' },
+          { name: 'ملغي', count: cancelled, color: '#EF4444' }
         ]
       });
     }
@@ -42,43 +44,43 @@ export default function RepDashboard() {
   useEffect(() => {
     calculateStats();
     const channel = supabase.channel('clients-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => {
-        calculateStats();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => calculateStats())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  if (!stats) return <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] text-gold animate-pulse">جاري تحميل لوحة التحكم...</div>;
+  if (!stats) return <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] text-yellow-500">جاري تحميل البيانات...</div>;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8 lg:p-12 overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8">
       <Toaster position="top-right" />
       
-      {/* العنوان - متجاوب الحجم */}
-      <div className="flex items-center gap-3 mb-8">
-        <LayoutDashboard className="text-gold" size={28} />
-        <h1 className="text-2xl md:text-3xl font-bold">لوحة تحكم المندوب</h1>
-      </div>
+      <header className="mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-yellow-500/10 rounded-xl">
+            <LayoutDashboard className="text-yellow-500" size={28} />
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold">لوحة التحليلات</h1>
+        </div>
+      </header>
       
-      {/* بطاقات الإحصائيات - Grid متجاوب */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8">
-        <StatCard title="إجمالي الطلبات" value={stats.total} icon={<TrendingUp size={20} />} color="text-gold" />
-        <StatCard title="إجمالي العمولات" value={`${stats.totalEarnings} ر.س`} icon={<Wallet size={20} />} color="text-violet-500" />
-        <StatCard title="المحصل (مدفوع)" value={`${stats.paidEarnings} ر.س`} icon={<CheckCircle size={20} />} color="text-green-500" />
+      {/* الإحصائيات الرئيسية */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <StatCard title="إجمالي الأرباح" value={`${stats.totalEarnings} ر.س`} icon={<Wallet size={24} />} color="text-yellow-500" gradient="from-yellow-500/20" />
+        <StatCard title="المحصل حالياً" value={`${stats.paidEarnings} ر.س`} icon={<CheckCircle size={24} />} color="text-green-500" gradient="from-green-500/20" />
+        <StatCard title="كفاءة الإنجاز" value={`${stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}%`} icon={<Award size={24} />} color="text-purple-500" gradient="from-purple-500/20" />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* الرسم البياني - حاوية مرنة */}
-        <div className="p-6 md:p-8 bg-[#121212] rounded-3xl border border-white/5 shadow-xl">
-          <h2 className="mb-6 font-bold text-lg">توزيع حالات الطلبات</h2>
-          <div className="h-[250px] w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* الرسم البياني */}
+        <div className="lg:col-span-2 p-6 bg-[#121212] rounded-3xl border border-white/5 shadow-2xl">
+          <h2 className="mb-6 font-bold text-lg flex items-center gap-2"><TrendingUp size={18} /> أداء الطلبات</h2>
+          <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.chartData}>
-                <XAxis dataKey="name" stroke="#666" fontSize={12} axisLine={false} tickLine={false} />
-                <YAxis stroke="#666" fontSize={12} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{backgroundColor: '#0a0a0a', border: '1px solid #333', borderRadius: '12px'}} />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                <XAxis dataKey="name" stroke="#666" axisLine={false} tickLine={false} />
+                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{backgroundColor: '#1a1a1a', border: 'none', borderRadius: '12px'}} />
+                <Bar dataKey="count" radius={[8, 8, 8, 8]} barSize={50}>
                   {stats.chartData.map((e: any, i: number) => <Cell key={i} fill={e.color} />)}
                 </Bar>
               </BarChart>
@@ -86,35 +88,36 @@ export default function RepDashboard() {
           </div>
         </div>
         
-        {/* التفاصيل */}
-        <div className="p-6 md:p-8 bg-[#121212] rounded-3xl border border-white/5 shadow-xl flex flex-col justify-center gap-4">
-          <DetailRow label="طلبات قيد المراجعة" value={stats.pending} icon={<Clock className="text-gold" size={18} />} />
-          <DetailRow label="طلبات مكتملة" value={stats.completed} icon={<CheckCircle className="text-violet-500" size={18} />} />
-          <DetailRow label="طلبات ملغية" value={stats.cancelled} icon={<XCircle className="text-red-500" size={18} />} />
+        {/* ملخص الحالة */}
+        <div className="p-6 bg-[#121212] rounded-3xl border border-white/5 shadow-2xl flex flex-col gap-4">
+          <h2 className="font-bold text-lg mb-2">توزيع الحالات</h2>
+          <DetailRow label="تحت المراجعة" value={stats.pending} color="text-yellow-500" icon={<Clock size={20} />} />
+          <DetailRow label="طلبات مكتملة" value={stats.completed} color="text-purple-500" icon={<CheckCircle size={20} />} />
+          <DetailRow label="طلبات ملغية" value={stats.cancelled} color="text-red-500" icon={<XCircle size={20} />} />
         </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ title, value, icon, color }: any) {
+function StatCard({ title, value, icon, color, gradient }: any) {
   return (
-    <div className="p-5 bg-[#121212] border border-white/5 rounded-2xl hover:border-gold/30 transition-all">
-      <div className={`mb-3 ${color}`}>{icon}</div>
-      <h3 className="text-gray-400 text-xs uppercase tracking-wider mb-1">{title}</h3>
-      <p className="text-xl md:text-2xl font-bold">{value}</p>
+    <div className={`p-6 bg-gradient-to-br ${gradient} to-[#121212] border border-white/5 rounded-3xl hover:scale-[1.02] transition-transform`}>
+      <div className={`${color} mb-4 p-3 bg-[#0a0a0a] w-fit rounded-2xl`}>{icon}</div>
+      <p className="text-gray-400 text-sm mb-1">{title}</p>
+      <p className="text-3xl font-bold">{value}</p>
     </div>
   );
 }
 
-function DetailRow({ label, value, icon }: any) {
+function DetailRow({ label, value, color, icon }: any) {
   return (
-    <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-xl border border-white/5">
+    <div className="flex items-center justify-between p-4 bg-[#0a0a0a] rounded-2xl border border-white/5">
       <div className="flex items-center gap-3">
-        {icon}
-        <span className="text-sm md:text-base text-gray-300 font-medium">{label}</span>
+        <div className={`${color}`}>{icon}</div>
+        <span className="text-gray-300">{label}</span>
       </div>
-      <span className="font-bold text-sm bg-white/5 px-3 py-1 rounded-lg">{value}</span>
+      <span className="font-bold text-lg">{value}</span>
     </div>
   );
 }
