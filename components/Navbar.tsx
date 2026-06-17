@@ -1,47 +1,74 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { Menu, X, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-lg border-b border-white/10">
-      <div className="max-w-6xl mx-auto flex justify-between items-center px-6 py-5">
-        {/* الشعار - حجم أكبر قليلاً ليبرز */}
-        <Link href="/" className="text-3xl font-bold text-gold tracking-tight hover:opacity-80 transition">
-          TRSY
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-white/5">
+      <div className="max-w-6xl mx-auto flex justify-between items-center px-6 py-4">
+        
+        {/* الشعار */}
+        <Link href="/" className="text-2xl font-black text-white tracking-tighter flex items-center gap-0.5">
+          SY<span className="text-yellow-500">TR</span>
         </Link>
         
-        {/* قائمة الشاشات الكبيرة - خط أكبر ومساحة أريح */}
-        <div className="hidden md:flex items-center text-gray-200 text-lg">
-          <Link href="/overview" className="hover:text-gold transition duration-300 font-medium">
+        {/* الروابط للشاشات الكبيرة */}
+        <div className="hidden md:flex items-center gap-8 text-gray-400">
+          <Link href="/overview" className="hover:text-white transition-colors duration-300 font-medium">
             عن المنصة
+          </Link>
+          <Link 
+            href="/login" 
+            className="px-6 py-2.5 bg-white text-black font-bold rounded-xl hover:bg-yellow-500 transition-all hover:scale-105 active:scale-95"
+          >
+            تسجيل الدخول
           </Link>
         </div>
 
-        {/* زر القائمة للجوال - تصميم أوضح وأكبر */}
+        {/* زر القائمة للموبايل */}
         <button 
-          className="md:hidden text-gold font-bold text-lg p-2" 
+          className="md:hidden text-white p-2" 
           onClick={() => setIsOpen(!isOpen)}
           aria-label="Toggle Menu"
         >
-          {isOpen ? 'إغلاق' : 'القائمة'}
+          {isOpen ? <X size={28} /> : <Menu size={28} />}
         </button>
       </div>
 
-      {/* قائمة الجوال المنسدلة - مساحة أكبر للضغط */}
-      {isOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-[#0a0a0a]/95 backdrop-blur-md border-b border-white/10 p-8 flex flex-col gap-6 text-center animate-in slide-in-from-top-4 shadow-2xl">
-          <Link 
-            href="/overview" 
-            className="text-xl text-white hover:text-gold transition font-medium" 
-            onClick={() => setIsOpen(false)}
+      {/* القائمة المنسدلة للموبايل */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden bg-[#050505] border-b border-white/5 overflow-hidden"
           >
-            عن المنصة
-          </Link>
-        </div>
-      )}
+            <div className="p-6 flex flex-col gap-4">
+              <Link 
+                href="/overview" 
+                className="text-lg text-gray-300 hover:text-white flex justify-between items-center py-2" 
+                onClick={() => setIsOpen(false)}
+              >
+                عن المنصة <ChevronRight size={20} />
+              </Link>
+              <Link 
+                href="/login" 
+                className="mt-4 w-full text-center py-4 bg-yellow-500 text-black font-bold rounded-xl"
+                onClick={() => setIsOpen(false)}
+              >
+                تسجيل الدخول
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

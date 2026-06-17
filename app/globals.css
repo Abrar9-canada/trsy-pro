@@ -1,16 +1,22 @@
 @import "tailwindcss";
 
 @theme {
+  /* تعريف الخطوط - هذا الجزء يحل خطأ Unknown utility class */
+  --font-cairo: "Cairo", sans-serif;
+
   /* تعاريف الألوان */
-  --color-dark: #0a0a0a;
-  --color-dark-light: #171717;
-  --color-gold: #D4AF37;
-  --color-gold-light: #F8E08E;
-  --color-violet: #6D28D9;
-  --color-violet-light: #8B5CF6;
+  --color-bg-primary: #050505;
+  --color-bg-secondary: #0f0f0f;
+  --color-gold: #eab308;
+  --color-gold-muted: #ca8a04;
+  --color-violet-main: #6d28d9;
   
-  /* إضافة الـ Animations */
+  /* التدرجات */
+  --background-image-gradient-radial: radial-gradient(circle at 50% 50%, var(--tw-gradient-stops));
+  
+  /* الأنيميشن */
   --animate-gradient-x: gradient-x 15s ease infinite;
+  --animate-ping-slow: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
 
   @keyframes gradient-x {
     0%, 100% { background-position: 0% 50%; }
@@ -24,8 +30,33 @@
   }
 
   body {
-    @apply bg-dark text-white antialiased overflow-x-hidden selection:bg-gold/30;
+    /* استخدام الكلاسات المخصصة */
+    @apply bg-bg-primary text-white antialiased overflow-x-hidden selection:bg-gold/30 selection:text-white font-cairo;
+  }
+  
+  /* تخصيص الـ Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #050505;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #eab308;
   }
 }
 
-/* لا داعي لإضافة @tailwind لأن الاستيراد في السطر الأول يقوم بالعمل */
+@layer components {
+  /* كلاسات قابلة لإعادة الاستخدام */
+  .card-glass {
+    @apply bg-bg-secondary border border-white/5 backdrop-blur-xl rounded-[2rem];
+  }
+  
+  .btn-primary {
+    @apply px-8 py-4 bg-gold text-black font-bold rounded-xl hover:bg-gold-muted transition-all active:scale-95;
+  }
+}
